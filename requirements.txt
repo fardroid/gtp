@@ -1,0 +1,5 @@
+flask
+requests
+newspaper3k
+feedparser
+playwright

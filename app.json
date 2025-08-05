@@ -1,0 +1,6 @@
+{
+  "name": "news-trends-parser",
+  "scripts": {
+    "postdeploy": "playwright install chromium"
+  }
+}
