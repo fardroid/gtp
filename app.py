@@ -7,6 +7,21 @@ app = Flask(__name__)
 app.debug = True
 
 # --- Получение трендов через Playwright ---
+import re
+
+def parse_searches(text):
+    """
+    Преобразует '20 тыс.' → 20000, '200+' → 200
+    """
+    text = text.lower().replace('+', '').strip()
+    match = re.search(r'(\d+)\s*тыс', text)
+    if match:
+        return int(match.group(1)) * 1000
+    match = re.search(r'(\d+)', text)
+    if match:
+        return int(match.group(1))
+    return None
+
 def get_google_trends():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -17,15 +32,20 @@ def get_google_trends():
         raw_titles = page.locator("#trend-table td.jvkLtd").all_text_contents()
         browser.close()
 
-        clean_titles = []
+        results = []
         for t in raw_titles:
             t = t.strip()
             if "Поисковых запросов" in t:
-                t = t.split("Поисковых запросов")[0]
-            if t:
-                clean_titles.append(t.strip())
+                parts = t.split("Поисковых запросов")
+                title = parts[0].strip()
+                searches = parse_searches(parts[1])
+                results.append({
+                    "title": title,
+                    "searches": searches
+                })
 
-        return clean_titles
+        return results
+
 
 
 @app.route('/trends', methods=['GET'])
@@ -89,4 +109,3 @@ import os
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Берём порт из окружения
     app.run(host="0.0.0.0", port=port)
-
