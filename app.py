@@ -79,14 +79,14 @@ def get_news():
         results = resp.json().get('items', [])
 
         articles = []
-        for r in results[:3]:
+        for r in results[:5]:
             try:
                 art = Article(r['link'])
                 art.download()
                 art.parse()
                 articles.append({
                     "title": art.title,
-                    "text": art.text[:500] + "...",
+                    "text": art.text[:1000] + "...",
                     "url": r['link']
                 })
             except Exception as e:
