@@ -72,9 +72,9 @@ def get_news():
 
     api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
     cx = "e6822b7d3afb14250"
-
+    date_filter = "dateRestrict=d3"
     try:
-        url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&tbm=nws"
+        url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&tbm=nws&{date_filter}"
         resp = requests.get(url)
         results = resp.json().get('items', [])
 
