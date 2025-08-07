@@ -88,15 +88,12 @@ def get_news():
                     "title": art.title,
                     "text": art.text[:1000] + "...",
                     "url": r['link'],
-                    "published_at": art.publish_date.isoformat() if art.publish_date else None
+                    "published_at": art.publish_date.isoformat() if art.publish_date else None,
+                    "image_url": r.get("pagemap", {}).get("cse_image", [{}])[0].get("src")
+
                 })
             except Exception as e:
-                articles.append({
-                    "title": r.get('title', 'Без названия'),
-                    "text": f"Ошибка парсинга: {str(e)}",
-                    "url": r['link'],
-                    "published_at": None
-                })
+                continue
 
         if not articles:
             return jsonify({"message": "Новости не найдены"})
