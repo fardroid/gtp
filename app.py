@@ -119,39 +119,54 @@ def image_search():
     cx = "e6822b7d3afb14250"
 
     try:
-        url = (
-            f"https://www.googleapis.com/customsearch/v1"
-            f"?q={query}&cx={cx}&key={api_key}&searchType=image&num=5"
-        )
+        # 1. Поиск изображений
+        url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&searchType=image&num=5"
         resp = requests.get(url)
         results = resp.json().get("items", [])
 
         if not results:
-            return jsonify({"error": "No image results found"}), 404
+            return jsonify({"message": "No image results found"}), 204
 
-        # Берём первую подходящую картинку
-        image_url = results[0]["link"]
-        image_resp = requests.get(image_url, timeout=10, verify=False)
+        # 2. Перебираем картинки и ищем рабочую
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; NewsBot/1.0)"
+        }
 
-        # Загружаем изображение
-        image = Image.open(BytesIO(image_resp.content)).convert("RGBA")
-        draw = ImageDraw.Draw(image)
+        image_url = None
+        image_data = None
 
-        # Настрой шрифт
+        for result in results:
+            try:
+                candidate_url = result["link"]
+                r = requests.get(candidate_url, headers=headers, timeout=10, verify=False)
+
+                if r.status_code == 200 and "image" in r.headers.get("Content-Type", ""):
+                    image_url = candidate_url
+                    image_data = r.content
+                    break
+            except Exception:
+                continue  # пробуем следующую
+
+        if image_data is None:
+            return jsonify({"message": "No valid image found"}), 204
+
+        # 3. Генерация изображения с текстом
+        image = Image.open(BytesIO(image_data)).convert("RGBA")
+        
+        # Настройка шрифта
         try:
             font = ImageFont.truetype("DejaVuSans.ttf", 36)
         except:
             font = ImageFont.load_default()
 
-        # Подложка под текст
         bbox = font.getbbox(overlay_text)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-
         padding = 20
         box_x = 30
         box_y = image.height - text_height - 2 * padding
 
+        # Подложка под текст
         overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         overlay_draw.rectangle(
@@ -159,14 +174,12 @@ def image_search():
             fill=(0, 0, 0, 160)
         )
 
-        # Объединяем подложку и изображение
+        # Объединяем и рисуем текст
         image = Image.alpha_composite(image, overlay)
-
-        # Поверх подложки — текст
         draw = ImageDraw.Draw(image)
         draw.text((box_x + padding, box_y + padding), overlay_text, font=font, fill=(255, 255, 255, 255))
 
-        # Сохраняем в память
+        # Конвертация в base64
         buffer = BytesIO()
         image.convert("RGB").save(buffer, format="JPEG")
         encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
