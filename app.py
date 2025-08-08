@@ -71,7 +71,7 @@ def get_news():
         return jsonify({"error": "query param is required"}), 400
 
     api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
-    cx = "e6822b7d3afb14250"
+    cx = "154464994ff404d2f"
     date_filter = "dateRestrict=d3"
     try:
         url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&tbm=nws&{date_filter}"
@@ -102,6 +102,81 @@ def get_news():
 
     except Exception as e:
         return jsonify({"error": str(e)})
+
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+import base64
+
+@app.route('/image', methods=['GET'])
+def image_search():
+    query = request.args.get("query")
+    overlay_text = request.args.get("text", "")
+
+    if not query:
+        return jsonify({"error": "query param is required"}), 400
+
+    api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
+    cx = "e6822b7d3afb14250"
+
+    try:
+        url = (
+            f"https://www.googleapis.com/customsearch/v1"
+            f"?q={query}&cx={cx}&key={api_key}&searchType=image&num=5"
+        )
+        resp = requests.get(url)
+        results = resp.json().get("items", [])
+
+        if not results:
+            return jsonify({"error": "No image results found"}), 404
+
+        # Берём первую подходящую картинку
+        image_url = results[0]["link"]
+        image_resp = requests.get(image_url, timeout=10)
+
+        # Загружаем изображение
+        image = Image.open(BytesIO(image_resp.content)).convert("RGBA")
+        draw = ImageDraw.Draw(image)
+
+        # Настрой шрифт
+        try:
+            font = ImageFont.truetype("DejaVuSans.ttf", 36)
+        except:
+            font = ImageFont.load_default()
+
+        # Подложка под текст
+        text_width, text_height = draw.textsize(overlay_text, font=font)
+        padding = 20
+        box_x = 30
+        box_y = image.height - text_height - 2 * padding
+
+        overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle(
+            [box_x, box_y, box_x + text_width + 2 * padding, box_y + text_height + 2 * padding],
+            fill=(0, 0, 0, 160)
+        )
+
+        # Объединяем подложку и изображение
+        image = Image.alpha_composite(image, overlay)
+
+        # Поверх подложки — текст
+        draw = ImageDraw.Draw(image)
+        draw.text((box_x + padding, box_y + padding), overlay_text, font=font, fill=(255, 255, 255, 255))
+
+        # Сохраняем в память
+        buffer = BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG")
+        encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        return jsonify({
+            "image_url": image_url,
+            "overlayed_base64": f"data:image/jpeg;base64,{encoded_image}"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 import os
 
