@@ -4,3 +4,4 @@ newspaper3k
 feedparser
 playwright
 lxml_html_clean
+pillow
