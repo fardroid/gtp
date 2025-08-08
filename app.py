@@ -131,7 +131,7 @@ def image_search():
 
         # Берём первую подходящую картинку
         image_url = results[0]["link"]
-        image_resp = requests.get(image_url, timeout=10)
+        image_resp = requests.get(image_url, timeout=10, verify=False)
 
         # Загружаем изображение
         image = Image.open(BytesIO(image_resp.content)).convert("RGBA")
