@@ -157,7 +157,7 @@ def image_search():
         # Настройка шрифта
         try:
             font_size = int(target_size[1] * 0.2)
-            font = ImageFont.truetype("DejaVuSans.ttf", font_size)
+            font = ImageFont.truetype("fonts/Roboto-Bold.ttf", font_size)
         except:
             font = ImageFont.load_default(font_size)
 
