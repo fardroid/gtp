@@ -103,7 +103,7 @@ def get_news():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from io import BytesIO
 import base64
 
@@ -151,33 +151,37 @@ def image_search():
             return jsonify({"message": "No valid image found"}), 204
 
         # 3. Генерация изображения с текстом
+        target_size = (1280, 720)
         image = Image.open(BytesIO(image_data)).convert("RGBA")
-        
+        image = ImageOps.fit(image, target_size, method=Image.LANCZOS, centering=(0.5, 0.5))
         # Настройка шрифта
         try:
-            font = ImageFont.truetype("DejaVuSans.ttf", 36)
+            font_size = int(target_size[1] * 0.2)
+            font = ImageFont.truetype("DejaVuSans.ttf", font_size)
         except:
-            font = ImageFont.load_default()
+            font = ImageFont.load_default(, font_size)
 
         bbox = font.getbbox(overlay_text)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
+        
         padding = 20
-        box_x = 30
-        box_y = image.height - text_height - 2 * padding
-
-        # Подложка под текст
-        overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        box_x = int((target_size[0] - text_width) / 2)
+        box_y = target_size[1] - text_height - 2 * padding
+        
+        # Подложка
+        overlay = Image.new("RGBA", target_size, (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         overlay_draw.rectangle(
-            [box_x, box_y, box_x + text_width + 2 * padding, box_y + text_height + 2 * padding],
+            [box_x - padding, box_y - padding, box_x + text_width + padding, box_y + text_height + padding],
             fill=(0, 0, 0, 160)
         )
-
-        # Объединяем и рисуем текст
+        
+        # Наложение + текст
         image = Image.alpha_composite(image, overlay)
         draw = ImageDraw.Draw(image)
-        draw.text((box_x + padding, box_y + padding), overlay_text, font=font, fill=(255, 255, 255, 255))
+        draw.text((box_x, box_y), overlay_text, font=font, fill=(255, 255, 255, 255))
+
 
         # Конвертация в base64
         buffer = BytesIO()
