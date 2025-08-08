@@ -144,7 +144,10 @@ def image_search():
             font = ImageFont.load_default()
 
         # Подложка под текст
-        text_width, text_height = draw.textsize(overlay_text, font=font)
+        bbox = font.getbbox(overlay_text)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+
         padding = 20
         box_x = 30
         box_y = image.height - text_height - 2 * padding
