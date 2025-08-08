@@ -115,7 +115,7 @@ def image_search():
     if not query:
         return jsonify({"error": "query param is required"}), 400
 
-    api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
+    api_key = "AIzaSyBmbtPHA8K5ysCrjRHdHMuxqfhxMGNAOsY"
     cx = "e6822b7d3afb14250"
 
     try:
