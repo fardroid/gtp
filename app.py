@@ -159,7 +159,7 @@ def image_search():
             font_size = int(target_size[1] * 0.2)
             font = ImageFont.truetype("DejaVuSans.ttf", font_size)
         except:
-            font = ImageFont.load_default(, font_size)
+            font = ImageFont.load_default(font_size)
 
         bbox = font.getbbox(overlay_text)
         text_width = bbox[2] - bbox[0]
