@@ -9,6 +9,7 @@ app.debug = True
 # --- Получение трендов через Playwright ---
 import re
 
+
 def parse_searches(text):
     """
     Преобразует '20 тыс.' → 20000, '200+' → 200
@@ -21,6 +22,7 @@ def parse_searches(text):
     if match:
         return int(match.group(1))
     return None
+
 
 def get_google_trends():
     with sync_playwright() as p:
@@ -47,7 +49,6 @@ def get_google_trends():
         return results
 
 
-
 @app.route('/trends', methods=['GET'])
 def trends_endpoint():
     try:
@@ -62,6 +63,7 @@ def trends_endpoint():
                 "Apple iPhone 16 презентация"
             ]
         })
+
 
 # --- Поиск новостей ---
 @app.route('/news', methods=['GET'])
@@ -103,9 +105,11 @@ def get_news():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from io import BytesIO
 import base64
+
 
 @app.route('/image', methods=['GET'])
 def image_search():
@@ -160,34 +164,76 @@ def image_search():
             font = ImageFont.truetype("fonts/Roboto-Bold.ttf", font_size)
         except:
             font = ImageFont.load_default(font_size)
-
-        bbox = font.getbbox(overlay_text)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        
-        padding = 20
-        box_x = int((target_size[0] - text_width) / 2)
-        box_y = target_size[1] - text_height - 2 * padding
-        
-        # Подложка
-        overlay = Image.new("RGBA", target_size, (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay)
-        overlay_draw.rectangle(
-            [box_x - padding, box_y - padding, box_x + text_width + padding, box_y + text_height + padding],
-            fill=(0, 0, 0, 160)
-        )
-        
-        # Наложение + текст
-        image = Image.alpha_composite(image, overlay)
+        # === ЛЕВОЕ ВЫРАВНИВАНИЕ + ПЕРЕНОСЫ СТРОК ===
         draw = ImageDraw.Draw(image)
-        draw.text((box_x, box_y), overlay_text, font=font, fill=(255, 255, 255, 255))
 
+        W, H = target_size
+        margin = 40  # внешний отступ от левого/нижнего края
+        padding = 28  # внутренние отступы внутри подложки
+        line_spacing = max(12, int((font.size if hasattr(font, "size") else 40) * 0.2))
 
-        # Конвертация в base64
+        # максимально допустимая ширина текста (не вся ширина экрана, а с полями)
+        max_text_width = W - 2 * margin - 2 * padding
+
+        # переносим текст по ширине пикселями
+        def wrap_by_width(text, font, max_w, draw):
+            words = text.split()
+            lines, cur = [], []
+            for w in words:
+                trial = (' '.join(cur + [w])).strip()
+                x0, y0, x1, y1 = draw.textbbox((0, 0), trial, font=font)
+                if (x1 - x0) <= max_w:
+                    cur.append(w)
+                else:
+                    if cur:
+                        lines.append(' '.join(cur))
+                        cur = [w]
+                    else:
+                        # если одно слово длиннее строки — кладём как есть
+                        lines.append(w)
+                        cur = []
+            if cur:
+                lines.append(' '.join(cur))
+            return lines
+
+        lines = wrap_by_width(overlay_text or "", font, max_text_width, draw)
+
+        # метрики строки
+        ascent, descent = font.getmetrics()
+        line_h = ascent + descent
+
+        # ширина = ширина самой длинной линии; высота = сумма высот + межстрочные зазоры
+        line_widths = []
+        for ln in lines:
+            x0, y0, x1, y1 = draw.textbbox((0, 0), ln, font=font)
+            line_widths.append(x1 - x0)
+        content_w = max(line_widths) if line_widths else 0
+        content_h = len(lines) * line_h + max(0, len(lines) - 1) * line_spacing
+
+        # координаты подложки: СЛЕВА, ВНИЗУ
+        box_x0 = margin
+        box_y0 = H - margin - (content_h + 2 * padding)
+        box_x1 = box_x0 + content_w + 2 * padding
+        box_y1 = box_y0 + content_h + 2 * padding
+
+        # рисуем полупрозрачную серую подложку
+        overlay_img = Image.new("RGBA", target_size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay_img)
+        overlay_draw.rectangle([box_x0, box_y0, box_x1, box_y1], fill=(0, 0, 0, 160))
+
+        image = Image.alpha_composite(image, overlay_img)
+
+        # рисуем текст слева-сверху, построчно (никаких anchor/центров)
+        tx = box_x0 + padding
+        ty = box_y0 + padding
+        for ln in lines:
+            draw.text((tx, ty), ln, font=font, fill=(255, 255, 255, 255))
+            ty += line_h + line_spacing
+
+        # Конвертация в base64 (оставь как у тебя далее)
         buffer = BytesIO()
         image.convert("RGB").save(buffer, format="JPEG")
         encoded_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
         return jsonify({
             "image_url": image_url,
             "overlayed_base64": f"data:image/jpeg;base64,{encoded_image}"
@@ -195,7 +241,6 @@ def image_search():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 import os
