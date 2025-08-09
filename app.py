@@ -71,9 +71,9 @@ def get_news():
     query = request.args.get('query')
     if not query:
         return jsonify({"error": "query param is required"}), 400
-
     api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
-    cx = "154464994ff404d2f"
+    cx = "e6822b7d3afb14250"
+
     date_filter = "dateRestrict=d3"
     try:
         url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&tbm=nws&{date_filter}"
@@ -120,7 +120,7 @@ def image_search():
         return jsonify({"error": "query param is required"}), 400
 
     api_key = "AIzaSyBmbtPHA8K5ysCrjRHdHMuxqfhxMGNAOsY"
-    cx = "e6822b7d3afb14250"
+    cx = "154464994ff404d2f"
 
     try:
         # 1. Поиск изображений
