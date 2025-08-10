@@ -219,7 +219,13 @@ def image_search():
 
         results = data.get("items", []) or []
         if not results:
-            return jsonify({"message": "No image results found"}), 204
+            return jsonify({
+                "ok": False,
+                "error": "no_results",
+                "reason": "google_cse_returned_empty_items",
+                "image_url": None,
+                "overlayed_base64": None
+            }), 200
 
         # 2) Берём первую реально отдающую image/*
         headers = {"User-Agent": "Mozilla/5.0 (compatible; NewsBot/1.0)"}
@@ -234,7 +240,13 @@ def image_search():
             except Exception:
                 continue
         if image_data is None:
-            return jsonify({"message": "No valid image found"}), 204
+            return jsonify({
+                "ok": False,
+                "error": "no_valid_image",
+                "reason": "all_candidate_links_failed_or_not_image_content_type",
+                "image_url": None,
+                "overlayed_base64": None
+            }), 200
 
         # 3) Ресайз + подложка + текст
         target_size = (1280, 720)
@@ -303,6 +315,7 @@ def image_search():
             composed.convert("RGB").save(buf, format="JPEG")
             encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
             return jsonify({
+                "ok": True,
                 "image_url": image_url,
                 "overlayed_base64": f"data:image/jpeg;base64,{encoded}"
             })
