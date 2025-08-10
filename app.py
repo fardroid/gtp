@@ -71,15 +71,55 @@ def get_news():
     query = request.args.get('query')
     if not query:
         return jsonify({"error": "query param is required"}), 400
+
     api_key = "AIzaSyD2m-KVtY94rCDPSX7Utxl23LQsGt_EtDs"
     cx = "e6822b7d3afb14250"
 
-    date_filter = "dateRestrict=d3"
     try:
-        url = f"https://www.googleapis.com/customsearch/v1?q={query}&cx={cx}&key={api_key}&tbm=nws&{date_filter}"
-        resp = requests.get(url)
-        results = resp.json().get('items', [])
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "q": query,
+            "cx": cx,
+            "key": api_key,
+            "tbm": "nws",
+            "dateRestrict": "d3",
+            "num": 10,
+        }
+        resp = requests.get(url, params=params, timeout=15)
+        data = resp.json() if resp.content else {}
 
+        # --- Явная обработка превышения квоты ---
+        # Google иногда шлёт 429, иногда 403 с текстом про квоту.
+        if resp.status_code == 429:
+            return jsonify({"error": "превышен лимит запросов"}), 429
+
+        err = data.get("error")
+        if err:
+            code = err.get("code")
+            status = err.get("status", "")
+            reason_top = err.get("reason", "")
+            reasons = {e.get("reason") for e in err.get("errors", []) if isinstance(e, dict)}
+
+            # Признаки rate limit / quota exceeded
+            rate_limited = (
+                code == 429
+                or status == "RESOURCE_EXHAUSTED"
+                or reason_top == "rateLimitExceeded"
+                or "rateLimitExceeded" in reasons
+                or any(
+                    (d.get("reason") in ("RATE_LIMIT_EXCEEDED", "QUOTA_EXCEEDED"))
+                    for d in err.get("details", [])
+                    if isinstance(d, dict)
+                )
+            )
+            if rate_limited:
+                return jsonify({"error": "превышен лимит запросов"}), 429
+
+            # Любая другая ошибка от Google
+            return jsonify({"error": f"google api error: {err.get('message', 'unknown error')}"}), code or 502
+
+        # --- Нормальный кейс: парсим результаты ---
+        results = data.get('items', []) or []
         articles = []
         for r in results[:5]:
             try:
@@ -88,13 +128,12 @@ def get_news():
                 art.parse()
                 articles.append({
                     "title": art.title,
-                    "text": art.text[:1000] + "...",
+                    "text": (art.text[:1000] + "...") if art.text else None,
                     "url": r['link'],
                     "published_at": art.publish_date.isoformat() if art.publish_date else None,
                     "image_url": r.get("pagemap", {}).get("cse_image", [{}])[0].get("src")
-
                 })
-            except Exception as e:
+            except Exception:
                 continue
 
         if not articles:
@@ -102,8 +141,10 @@ def get_news():
 
         return jsonify(articles)
 
+    except requests.Timeout:
+        return jsonify({"error": "превышено время ожидания запроса к Google"}), 504
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
 
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
