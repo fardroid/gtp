@@ -253,10 +253,10 @@ def image_search():
         base = Image.open(BytesIO(image_data)).convert("RGBA")
         base = ImageOps.fit(base, target_size, method=Image.LANCZOS, centering=(0.5, 0.5))
 
-        font = pick_font(int(target_size[1] * 0.18))
+        font = pick_font(int(target_size[1] * 0.12))
         W, H = target_size
         margin, padding = 40, 28
-        line_spacing = max(12, int((getattr(font, "size", 40)) * 0.2))
+        line_spacing = max(6, int((getattr(font, "size", 40)) * 0.1))
         max_text_width = W - 2 * margin - 2 * padding
 
         # перенос по ширине (измерения на временном draw)
