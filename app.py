@@ -113,7 +113,7 @@ def get_news():
                 )
             )
             if rate_limited:
-                return jsonify({"error": "превышен лимит запросов"}), 429
+                return jsonify({"error": f"превышен лимит запросов: code: {code}, status: {status}, reasons: {reasons}"}), 429
 
             # Любая другая ошибка от Google
             return jsonify({"error": f"google api error: {err.get('message', 'unknown error')}"}), code or 502
