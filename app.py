@@ -91,7 +91,7 @@ def get_news():
         # --- Явная обработка превышения квоты ---
         # Google иногда шлёт 429, иногда 403 с текстом про квоту.
         if resp.status_code == 429:
-            return jsonify({"error": "превышен лимит запросов"}), 429
+            return jsonify({"error": f"превышен лимит запросов.\n {data} "}), 429
 
         err = data.get("error")
         if err:
