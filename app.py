@@ -28,7 +28,7 @@ def get_google_trends():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto("https://trends.google.com/trending?geo=RU&hl=ru", timeout=60000)
+        page.goto("https://trends.google.com/trending?geo=RU&hl=ru&sort=search-volume&hours=4&status=active", timeout=60000)
 
         page.wait_for_selector("#trend-table td.jvkLtd", timeout=60000)
         raw_titles = page.locator("#trend-table td.jvkLtd").all_text_contents()
