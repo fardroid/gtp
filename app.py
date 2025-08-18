@@ -55,14 +55,15 @@ def trends_endpoint():
         trends = get_google_trends()
         return jsonify(trends)
     except Exception as e:
-        return jsonify({
-            "error": str(e),
-            "trends": [
-                "SpaceX запускает Starship",
-                "Выборы в США",
-                "Apple iPhone 16 презентация"
-            ]
-        })
+        jsonify({"message": "Новости не найдены"})
+        # return jsonify({
+        #     "error": str(e),
+        #     "trends": [
+        #         "SpaceX запускает Starship",
+        #         "Выборы в США",
+        #         "Apple iPhone 16 презентация"
+        #     ]
+        # })
 
 
 # --- Поиск новостей ---
