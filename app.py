@@ -231,9 +231,25 @@ def image_search():
         # 2) Берём первую реально отдающую image/*
         headers = {"User-Agent": "Mozilla/5.0 (compatible; NewsBot/1.0)"}
         image_url, image_data = None, None
+
+        def pick_candidate(r: dict) -> str | None:
+            pm = r.get("pagemap", {}) or {}
+            # 1) OpenGraph
+            og = (pm.get("metatags") or [{}])[0].get("og:image")
+            if og:
+                return og
+            # 2) CSE image (иногда кладётся сюда)
+            cse_img = (pm.get("cse_image") or [{}])[0].get("src")
+            if cse_img:
+                return cse_img
+            # 3) Фолбэк: ссылка на страницу (может оказаться прямой картинкой в редких случаях)
+            return None
+    
         for r in results:
             try:
-                candidate = r["link"]
+                candidate = pick_candidate(r)
+                if not candidate:
+                    continue
                 rimg = requests.get(candidate, headers=headers, timeout=10, verify=False)
                 if rimg.status_code == 200 and "image" in rimg.headers.get("Content-Type", ""):
                     image_url, image_data = candidate, rimg.content
