@@ -313,12 +313,13 @@ def image_search():
             return send_file(buf, mimetype="image/jpeg", download_name="image.jpg")
         else:
             buf = BytesIO()
-            composed.convert("RGB").save(buf, format="JPEG")
+            composed.save(buf, format="PNG")
+            buf.seek(0)
             encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
             return jsonify({
                 "ok": True,
                 "image_url": image_url,
-                "overlayed_base64": f"data:image/jpeg;base64,{encoded}"
+                "overlayed_base64": f"data:image/png;base64,{encoded}"
             })
 
     except requests.Timeout:
