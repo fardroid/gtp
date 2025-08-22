@@ -250,7 +250,7 @@ def image_search():
             }), 200
 
         # 3) Ресайз + подложка + текст
-        target_size = (1280, 720)
+        target_size = (1024, 576)
         base = Image.open(BytesIO(image_data)).convert("RGBA")
         base = ImageOps.fit(base, target_size, method=Image.LANCZOS, centering=(0.5, 0.5))
 
@@ -313,7 +313,7 @@ def image_search():
             return send_file(buf, mimetype="image/jpeg", download_name="image.jpg")
         else:
             buf = BytesIO()
-            composed.save(buf, format="PNG")
+            composed.save(buf, format="PNG", optimize=True)
             buf.seek(0)
             encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
             return jsonify({
