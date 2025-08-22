@@ -250,7 +250,7 @@ def image_search():
             }), 200
 
         # 3) Ресайз + подложка + текст
-        target_size = (1024, 576)
+        target_size = (1024, 1024)
         base = Image.open(BytesIO(image_data)).convert("RGBA")
         base = ImageOps.fit(base, target_size, method=Image.LANCZOS, centering=(0.5, 0.5))
 
