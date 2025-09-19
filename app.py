@@ -26,7 +26,15 @@ def parse_searches(text):
 
 def get_google_trends():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+            ],
+        )
         page = browser.new_page()
         page.goto("https://trends.google.com/trending?geo=RU&hl=ru&sort=search-volume&hours=4&status=active", timeout=60000)
 
@@ -55,15 +63,8 @@ def trends_endpoint():
         trends = get_google_trends()
         return jsonify(trends)
     except Exception as e:
-        jsonify({"message": "Новости не найдены"})
-        # return jsonify({
-        #     "error": str(e),
-        #     "trends": [
-        #         "SpaceX запускает Starship",
-        #         "Выборы в США",
-        #         "Apple iPhone 16 презентация"
-        #     ]
-        # })
+        app.logger.exception("Failed to fetch trends")
+        return jsonify({"error": "failed_to_fetch_trends", "details": str(e)}), 500
 
 
 # --- Поиск новостей ---
